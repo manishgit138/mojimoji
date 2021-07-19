@@ -83,8 +83,8 @@ jobs:
           ${{ env.img }} \
           bash -exc '\
           source .env/bin/activate && \
-          python -m setup.py bdist_wheel && \
-          python -m auditwheel repair dist/*whl && \
+          python setup.py bdist_wheel && \
+          python auditwheel repair dist/*whl && \
           deactivate'
 
     - name: Publish pypi
