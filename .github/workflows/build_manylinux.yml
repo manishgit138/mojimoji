@@ -46,12 +46,11 @@ jobs:
     strategy:
       matrix:
         pyver: [cp36-cp36m, cp37-cp37m, cp38-cp38]
-        arch: [aarch64]
       fail-fast: false
     runs-on: ubuntu-latest
     env:
       py: /opt/python/${{ matrix.pyver }}/bin/python
-      img: quay.io/pypa/manylinux2014_${{ matrix.arch }}
+      img: quay.io/pypa/manylinux2014_aarch64
     steps:
     - name: Checkout
       uses: actions/checkout@v1
@@ -68,3 +67,27 @@ jobs:
           python -m pip install -r requirements.txt && \
           python -m pip install -e . && \
           deactivate'
+
+    - name: Run test
+      run: |
+        docker run --rm -v ${{ github.workspace }}:/ws:rw --workdir=/ws \
+          ${{ env.img }} \
+          bash -exc '\
+          source .env/bin/activate && \
+          python -m pytest && \
+          deactivate'
+
+    - name: Build
+      run: |
+        docker run --rm -v ${{ github.workspace }}:/ws:rw --workdir=/ws \
+          ${{ env.img }} \
+          bash -exc '\
+          source .env/bin/activate && \
+          python -m setup.py bdist_wheel && \
+          python -m auditwheel repair dist/*whl && \
+          deactivate'
+
+    - name: Publish pypi
+      if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/')
+      run: |
+        twine upload wheelhouse/*whl -u ${{ secrets.PYPI_USER }} -p ${{ secrets.PYPI_PASS }}
